@@ -1,0 +1,6 @@
+{
+  "name": "Voice Bilingual Professionalizer",
+  "description": "Chrome extension and test workbench for voice-to-bilingual professional refinement in Bangla and English.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

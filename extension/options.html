@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Voice Bilingual Professionalizer</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="settings-layout">
+    <!-- Header -->
+    <header class="settings-header">
+      <div class="brand-bar">
+        <span class="brand-icon">🎙</span>
+        <h1 class="brand-title">Voice Bilingual Professionalizer</h1>
+      </div>
+      <p class="brand-subtitle">Configure AI credentials, speech recognition preferences, and keyboard shortcuts.</p>
+    </header>
+
+    <!-- Main Settings Form -->
+    <main class="settings-body">
+      <!-- Section 1: AI Provider & Credentials -->
+      <section class="settings-card">
+        <div class="card-title-row">
+          <h2 class="card-heading">AI Provider Configuration</h2>
+          <span class="security-badge">🔒 Secure Local Storage</span>
+        </div>
+        <p class="section-desc">Choose your AI provider. Credentials are stored solely in your local browser sandbox and never shared.</p>
+
+        <!-- Provider Tabs -->
+        <div class="provider-selector">
+          <label class="provider-radio">
+            <input type="radio" name="ai-provider" value="openai" id="prov-openai" checked>
+            <span class="provider-card">
+              <strong>OpenAI</strong>
+              <small>GPT-4o / GPT-4o-mini</small>
+            </span>
+          </label>
+          <label class="provider-radio">
+            <input type="radio" name="ai-provider" value="gemini" id="prov-gemini">
+            <span class="provider-card">
+              <strong>Google Gemini</strong>
+              <small>Gemini 2.5 Flash</small>
+            </span>
+          </label>
+          <label class="provider-radio">
+            <input type="radio" name="ai-provider" value="custom" id="prov-custom">
+            <span class="provider-card">
+              <strong>Custom / Local API</strong>
+              <small>Ollama, Groq, Proxy</small>
+            </span>
+          </label>
+        </div>
+
+        <!-- OpenAI Fields -->
+        <div id="fields-openai" class="provider-fields">
+          <div class="form-group">
+            <label for="openai-key">OpenAI API Key</label>
+            <div class="input-with-button">
+              <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off">
+              <button type="button" id="btn-toggle-openai" class="btn-toggle">Show</button>
+            </div>
+            <small class="field-hint">Obtain from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>. Note: ChatGPT web login is separate from API keys.</small>
+          </div>
+          <div class="form-group">
+            <label for="openai-model">Model</label>
+            <select id="openai-model">
+              <option value="gpt-4o-mini">gpt-4o-mini (Fast & Recommended)</option>
+              <option value="gpt-4o">gpt-4o (Flagship Multilingual)</option>
+              <option value="o3-mini">o3-mini (High-Accuracy Reasoning)</option>
+              <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Gemini Fields -->
+        <div id="fields-gemini" class="provider-fields" style="display: none;">
+          <div class="form-group">
+            <label for="gemini-key">Gemini API Key</label>
+            <div class="input-with-button">
+              <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off">
+              <button type="button" id="btn-toggle-gemini" class="btn-toggle">Show</button>
+            </div>
+            <small class="field-hint">Obtain from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</small>
+          </div>
+          <div class="form-group">
+            <label for="gemini-model">Model</label>
+            <select id="gemini-model">
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Latest & Recommended - Fast Bilingual)</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Cost-Efficient Flash Lite)</option>
+              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Complex Nuance & Pro Reasoning)</option>
+              <option value="gemini-flash-latest">gemini-flash-latest (Always Latest Flash)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom Fields -->
+        <div id="fields-custom" class="provider-fields" style="display: none;">
+          <div class="form-group">
+            <label for="custom-endpoint">Endpoint URL (OpenAI-compatible)</label>
+            <input type="url" id="custom-endpoint" placeholder="http://localhost:11434/v1/chat/completions">
+          </div>
+          <div class="form-group">
+            <label for="custom-key">API Key (Optional)</label>
+            <input type="password" id="custom-key" placeholder="Bearer token if required">
+          </div>
+          <div class="form-group">
+            <label for="custom-model">Model Name</label>
+            <input type="text" id="custom-model" placeholder="e.g. llama3:latest">
+          </div>
+        </div>
+
+        <!-- Test Connection & Clear Buttons -->
+        <div class="test-row">
+          <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection</button>
+          <button type="button" id="btn-clear-keys" class="btn btn-danger-outline">Clear Stored Keys</button>
+          <span id="test-status" class="test-status"></span>
+        </div>
+      </section>
+
+      <!-- Section 2: Speech & Voice Preferences -->
+      <section class="settings-card">
+        <h2 class="card-heading">Speech & Voice Input</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="pref-language">Default Input Language</label>
+            <select id="pref-language">
+              <option value="bn-BD">Bangla (বাংলাদেশ - bn-BD)</option>
+              <option value="en-US">English (United States - en-US)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="pref-autostart">
+              <span>Automatically start listening when extension opens</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Output Tone & Style -->
+      <section class="settings-card">
+        <h2 class="card-heading">Professional Output Tuning</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="pref-tone">Refinement Tone</label>
+            <select id="pref-tone">
+              <option value="professional">Professional & Polite (Balanced Corporate)</option>
+              <option value="executive">Executive & Formal (Concise & Direct)</option>
+              <option value="friendly">Helpful & Warm (Client Relations)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="pref-conciseness">Length & Detail</label>
+            <select id="pref-conciseness">
+              <option value="balanced">Balanced (Recommended)</option>
+              <option value="concise">Concise & Punchy</option>
+              <option value="detailed">Comprehensive & Expressive</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Keyboard Shortcut Guide -->
+      <section class="settings-card">
+        <h2 class="card-heading">Keyboard Shortcut</h2>
+        <p class="section-desc">Activate voice recording instantly from any active tab.</p>
+        <div class="shortcut-box">
+          <div class="shortcut-display">
+            <span>Primary Shortcut:</span>
+            <kbd>Ctrl + Shift + V</kbd> <span class="dim">(or <kbd>⌘ + Shift + V</kbd> on Mac)</span>
+          </div>
+          <p class="shortcut-instructions">
+            To change or customize this keybinding in Chrome:
+            <br>
+            1. Open a new tab and navigate to: <code class="code-url">chrome://extensions/shortcuts</code>
+            <br>
+            2. Locate <strong>Voice Bilingual Professionalizer</strong>.
+            <br>
+            3. Click the pencil icon and press your desired shortcut key combination.
+          </p>
+        </div>
+      </section>
+
+      <!-- Section 5: Privacy & Architecture Guarantee -->
+      <section class="settings-card privacy-card">
+        <h2 class="card-heading">Privacy & Data Handling</h2>
+        <ul class="privacy-list">
+          <li><strong>Zero Session Scraping:</strong> We never inspect, collect, or scrape ChatGPT web cookies or account passwords.</li>
+          <li><strong>Ephemeral Audio:</strong> Microphone audio is converted to text in-memory and immediately released. Zero audio is stored.</li>
+          <li><strong>Local Storage:</strong> Your API keys are stored in Chrome's sandboxed local storage on your machine.</li>
+        </ul>
+      </section>
+
+      <!-- Save Bar -->
+      <div class="save-bar">
+        <button type="button" id="btn-save-settings" class="btn btn-primary">Save Settings</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
