@@ -31,6 +31,14 @@
       </div>
     </header>
 
+    <!-- Running API Key Indicator Bar -->
+    <div id="sidepanel-api-banner" class="api-status-banner">
+      <div class="api-status-left">
+        <span class="live-dot"></span>
+        <span class="api-text">Running API Key: <strong id="sidepanel-api-name">OpenAI</strong></span>
+      </div>
+    </div>
+
     <main class="content-body">
       <!-- 1. RECORDING STAGE -->
       <section id="stage-voice" class="stage-section active">
@@ -43,7 +51,6 @@
 
         <div class="status-zone">
           <span id="recording-timer" class="recording-timer tabular-nums">00:00</span>
-          <p id="status-label" class="status-label">Click microphone to speak</p>
         </div>
 
         <div class="lang-selector-strip">
@@ -57,17 +64,35 @@
           </label>
         </div>
 
-        <div id="transcript-preview" class="transcript-preview empty">
-          <span class="preview-placeholder">Listening... speak naturally in Bangla, English or Banglish</span>
+        <div class="transcript-box">
+          <div class="transcript-box-header">
+            <span class="transcript-box-title">Original Voice Input</span>
+            <button id="btn-copy-header" class="mini-copy-btn" title="Copy original voice input" disabled>
+              <span id="copy-header-text">📋 Copy</span>
+            </button>
+          </div>
+          <div id="transcript-preview" class="transcript-preview empty">
+            <span class="preview-placeholder"></span>
+          </div>
         </div>
 
-        <div class="voice-controls">
-          <button id="btn-stop" class="btn btn-primary" disabled>
-            <span>Stop & Refine</span>
-          </button>
-          <button id="btn-cancel" class="btn btn-secondary">
-            <span>Cancel</span>
-          </button>
+        <div class="voice-controls-stacked">
+          <div class="voice-controls-row">
+            <button id="btn-stop" class="btn btn-stop" disabled title="Stop voice recording">
+              <span>■ Stop</span>
+            </button>
+            <button id="btn-copy-original" class="btn btn-copy" disabled title="Copy voice input directly">
+              <span>📋 Copy Voice Input</span>
+            </button>
+          </div>
+          <div class="voice-controls-row">
+            <button id="btn-refine" class="btn btn-primary" disabled title="Refine into professional versions">
+              <span>✨ Refine</span>
+            </button>
+            <button id="btn-cancel" class="btn btn-secondary" title="Cancel recording">
+              <span>✕ Cancel</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -140,7 +165,8 @@
     </main>
 
     <footer class="app-footer">
-      <span class="shortcut-tip">Shortcut: <kbd>Ctrl+Shift+V</kbd></span>
+      <span class="developer-credit">Developed by <strong>Akash</strong></span>
+      <span class="shortcut-tip">Shortcut: <kbd>Ctrl+Shift+X</kbd></span>
     </footer>
   </div>
 

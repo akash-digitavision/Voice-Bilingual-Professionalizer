@@ -6,7 +6,7 @@ import { SpeechService } from './modules/speech.js';
 import { normalizeTranscript } from './modules/normalizer.js';
 import { generateBilingualOutput } from './modules/ai-providers.js';
 import { copyToClipboard } from './modules/clipboard.js';
-import { getSettings } from './modules/storage.js';
+import { getSettings, getEffectiveProvider } from './modules/storage.js';
 
 // DOM Elements
 const stageVoice = document.getElementById('stage-voice');
@@ -20,6 +20,10 @@ const recordingTimer = document.getElementById('recording-timer');
 const statusLabel = document.getElementById('status-label');
 const transcriptPreview = document.getElementById('transcript-preview');
 const btnStop = document.getElementById('btn-stop');
+const btnCopyOriginal = document.getElementById('btn-copy-original');
+const btnCopyHeader = document.getElementById('btn-copy-header');
+const copyHeaderText = document.getElementById('copy-header-text');
+const btnRefine = document.getElementById('btn-refine');
 const btnCancel = document.getElementById('btn-cancel');
 
 const langBn = document.getElementById('lang-bn');
@@ -88,8 +92,12 @@ function initSpeech() {
       currentState = 'RECORDING';
       btnMic.classList.add('recording');
       micPulseRing.classList.add('recording');
-      statusLabel.textContent = 'Listening... Speak naturally';
+      if (statusLabel) statusLabel.textContent = '';
       btnStop.disabled = false;
+      btnStop.classList.add('recording');
+      btnRefine.disabled = true;
+      btnCopyOriginal.disabled = true;
+      btnCopyHeader.disabled = true;
       startTimer();
     },
     onResult: (result) => {
@@ -97,6 +105,9 @@ function initSpeech() {
       if (currentTranscript.trim()) {
         transcriptPreview.classList.remove('empty');
         transcriptPreview.textContent = currentTranscript;
+        btnCopyOriginal.disabled = false;
+        btnCopyHeader.disabled = false;
+        btnRefine.disabled = false;
       }
     },
     onError: (err) => {
@@ -105,6 +116,7 @@ function initSpeech() {
       currentState = 'ERROR';
       btnMic.classList.remove('recording');
       micPulseRing.classList.remove('recording');
+      btnStop.classList.remove('recording');
       if (!currentTranscript.trim()) {
         showError('Microphone Notice', err.message);
       }
@@ -112,13 +124,13 @@ function initSpeech() {
     onEnd: () => {
       btnMic.classList.remove('recording');
       micPulseRing.classList.remove('recording');
+      btnStop.classList.remove('recording');
+      btnStop.disabled = true;
       stopTimer();
 
-      if (currentState === 'STOPPING') {
-        processTranscript();
-      } else if (currentState === 'RECORDING') {
+      if (currentState === 'RECORDING') {
         currentState = 'IDLE';
-        statusLabel.textContent = 'Recording stopped. Click mic to speak.';
+        if (statusLabel) statusLabel.textContent = '';
       }
     }
   });
@@ -129,20 +141,29 @@ function startRecording() {
   initSpeech();
   currentTranscript = '';
   transcriptPreview.classList.add('empty');
-  transcriptPreview.textContent = 'Listening... speak naturally in Bangla, English or Banglish';
+  transcriptPreview.textContent = '';
+  btnCopyOriginal.disabled = true;
+  btnCopyHeader.disabled = true;
+  btnRefine.disabled = true;
   speech.start();
 }
 
 function stopRecording() {
-  if (!speech || !speech.isRecording) {
-    if (currentTranscript.trim()) {
-      processTranscript();
-    }
-    return;
+  if (speech && speech.isRecording) {
+    speech.stop();
   }
-  currentState = 'STOPPING';
-  statusLabel.textContent = 'Finishing audio capture...';
-  speech.stop();
+  currentState = 'IDLE';
+  btnMic.classList.remove('recording');
+  micPulseRing.classList.remove('recording');
+  btnStop.classList.remove('recording');
+  btnStop.disabled = true;
+  stopTimer();
+  if (statusLabel) statusLabel.textContent = '';
+  if (currentTranscript.trim()) {
+    btnCopyOriginal.disabled = false;
+    btnCopyHeader.disabled = false;
+    btnRefine.disabled = false;
+  }
 }
 
 function cancelRecording() {
@@ -151,11 +172,16 @@ function cancelRecording() {
   currentState = 'IDLE';
   btnMic.classList.remove('recording');
   micPulseRing.classList.remove('recording');
+  btnStop.classList.remove('recording');
   btnStop.disabled = true;
-  statusLabel.textContent = 'Cancelled. Click microphone to speak.';
+  btnRefine.disabled = true;
+  btnCopyOriginal.disabled = true;
+  btnCopyHeader.disabled = true;
+  currentTranscript = '';
+  if (statusLabel) statusLabel.textContent = '';
   recordingTimer.textContent = '00:00';
   transcriptPreview.classList.add('empty');
-  transcriptPreview.textContent = 'Listening... speak naturally in Bangla, English or Banglish';
+  transcriptPreview.textContent = '';
 }
 
 async function processTranscript() {
@@ -228,6 +254,45 @@ btnMic.addEventListener('click', () => {
 });
 
 btnStop.addEventListener('click', stopRecording);
+
+if (btnRefine) {
+  btnRefine.addEventListener('click', () => {
+    if (currentTranscript.trim()) {
+      processTranscript();
+    }
+  });
+}
+
+function handleCopyOriginal() {
+  if (!currentTranscript.trim()) return;
+  copyToClipboard(currentTranscript).then((success) => {
+    if (success) {
+      if (btnCopyOriginal) {
+        const origHtml = btnCopyOriginal.innerHTML;
+        btnCopyOriginal.innerHTML = '<span>Copied ✓</span>';
+        setTimeout(() => {
+          btnCopyOriginal.innerHTML = origHtml;
+        }, 1800);
+      }
+      if (copyHeaderText) {
+        const origText = copyHeaderText.textContent;
+        copyHeaderText.textContent = 'Copied ✓';
+        setTimeout(() => {
+          copyHeaderText.textContent = origText;
+        }, 1800);
+      }
+    }
+  });
+}
+
+if (btnCopyOriginal) {
+  btnCopyOriginal.addEventListener('click', handleCopyOriginal);
+}
+
+if (btnCopyHeader) {
+  btnCopyHeader.addEventListener('click', handleCopyOriginal);
+}
+
 btnCancel.addEventListener('click', cancelRecording);
 
 langBn.addEventListener('change', () => {
@@ -278,6 +343,32 @@ btnErrorSettings.addEventListener('click', () => {
 
 window.addEventListener('DOMContentLoaded', async () => {
   settings = await getSettings();
+
+  const sidepanelApiName = document.getElementById('sidepanel-api-name');
+  if (sidepanelApiName) {
+    const prov = getEffectiveProvider(settings);
+    const sideDot = document.querySelector('.api-status-bar .status-dot');
+    if (prov === 'none') {
+      sidepanelApiName.textContent = 'None (Open Settings)';
+      if (sideDot) {
+        sideDot.style.background = '#64748b';
+        sideDot.style.boxShadow = 'none';
+      }
+    } else {
+      const nameMap = {
+        openai: 'OpenAI',
+        gemini: 'Google Gemini',
+        custom: 'Custom API'
+      };
+      const mod = prov === 'openai' ? settings.openaiModel : prov === 'gemini' ? settings.geminiModel : settings.customModel;
+      sidepanelApiName.textContent = `${nameMap[prov] || prov} (${mod || 'default'})`;
+      if (sideDot) {
+        sideDot.style.background = '#10b981';
+        sideDot.style.boxShadow = '0 0 6px #10b981';
+      }
+    }
+  }
+
   if (settings.inputLanguage === 'en-US') {
     langEn.checked = true;
   } else {

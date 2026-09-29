@@ -56,32 +56,134 @@ CRITICAL: Return ONLY a valid JSON object strictly matching this schema:
 }`;
 }
 
+// Common Provider Interface & Implementations
+export class ChatGPTProvider {
+  constructor(settings = {}) {
+    this.name = 'ChatGPT / OpenAI';
+    this.id = 'openai';
+    this.key = settings.openaiKey || '';
+    this.model = settings.openaiModel || 'gpt-4o-mini';
+  }
+
+  async getStatus() {
+    if (!this.key) {
+      return {
+        connected: false,
+        status: 'unconfigured',
+        label: 'Not Configured',
+        message: 'OpenAI API key required from platform.openai.com (ChatGPT consumer subscriptions do not support external extension billing).'
+      };
+    }
+    return {
+      connected: true,
+      status: 'ready',
+      label: 'Configured & Ready',
+      model: this.model,
+      message: `Direct API execution with ${this.model}.`
+    };
+  }
+
+  async generateBilingualResponse(transcript, tone, conciseness) {
+    return await callOpenAI(transcript, { openaiKey: this.key, openaiModel: this.model }, tone, conciseness);
+  }
+}
+
+export class GeminiProvider {
+  constructor(settings = {}) {
+    this.name = 'Google Gemini';
+    this.id = 'gemini';
+    this.key = settings.geminiKey || '';
+    this.model = settings.geminiModel || 'gemini-3.8-flash';
+  }
+
+  async getStatus() {
+    if (!this.key) {
+      return {
+        connected: false,
+        status: 'unconfigured',
+        label: 'Not Configured',
+        message: 'Gemini API key is required from Google AI Studio.'
+      };
+    }
+    return {
+      connected: true,
+      status: 'ready',
+      label: 'Configured & Ready',
+      model: this.model,
+      message: `Direct Gemini API execution with ${this.model}.`
+    };
+  }
+
+  async generateBilingualResponse(transcript, tone, conciseness) {
+    return await callGemini(transcript, { geminiKey: this.key, geminiModel: this.model }, tone, conciseness);
+  }
+}
+
+export class CustomProvider {
+  constructor(settings = {}) {
+    this.name = 'Custom Endpoint';
+    this.id = 'custom';
+    this.endpoint = settings.customEndpoint || '';
+    this.key = settings.customKey || '';
+    this.model = settings.customModel || 'default';
+  }
+
+  async getStatus() {
+    if (!this.endpoint) {
+      return {
+        connected: false,
+        status: 'unconfigured',
+        label: 'Not Configured',
+        message: 'Custom endpoint URL required.'
+      };
+    }
+    return {
+      connected: true,
+      status: 'ready',
+      label: 'Configured & Ready',
+      endpoint: this.endpoint
+    };
+  }
+
+  async generateBilingualResponse(transcript, tone, conciseness) {
+    return await callCustomEndpoint(transcript, {
+      customEndpoint: this.endpoint,
+      customKey: this.key,
+      customModel: this.model
+    }, tone, conciseness);
+  }
+}
+
+export class AIProviderManager {
+  static getProvider(settings = {}) {
+    const providerName = settings.provider || 'openai';
+    switch (providerName) {
+      case 'openai':
+        return new ChatGPTProvider(settings);
+      case 'gemini':
+        return new GeminiProvider(settings);
+      case 'custom':
+        return new CustomProvider(settings);
+      default:
+        throw { code: ERROR_CODES.INVALID_REQUEST, message: `Unsupported provider: ${providerName}` };
+    }
+  }
+}
+
 export async function generateBilingualOutput(transcript, settings = {}) {
-  const provider = settings.provider || 'openai';
+  const providerInstance = AIProviderManager.getProvider(settings);
   const tone = settings.tone || 'professional';
   const conciseness = settings.conciseness || 'balanced';
 
   try {
-    if (provider === 'openai') {
-      return await callOpenAI(transcript, settings, tone, conciseness);
-    } else if (provider === 'gemini') {
-      return await callGemini(transcript, settings, tone, conciseness);
-    } else if (provider === 'custom') {
-      return await callCustomEndpoint(transcript, settings, tone, conciseness);
-    } else {
-      throw { code: ERROR_CODES.INVALID_REQUEST, message: `Unsupported provider: ${provider}` };
-    }
+    return await providerInstance.generateBilingualResponse(transcript, tone, conciseness);
   } catch (err) {
-    // Check fallback policy if enabled and alternative is available
-    if (settings.enableFallback && provider === 'openai' && settings.geminiKey) {
-      console.warn('Primary OpenAI provider failed, attempting fallback to Gemini:', err);
-      try {
-        return await callGemini(transcript, settings, tone, conciseness);
-      } catch (fallbackErr) {
-        throw normalizeError(fallbackErr);
-      }
-    }
-    throw normalizeError(err);
+    const normalized = normalizeError(err);
+    // Annotate error with active provider details so UI can prompt user transparently
+    normalized.provider = providerInstance.id;
+    normalized.providerName = providerInstance.name;
+    normalized.hasFallback = !!(settings.enableFallback && providerInstance.id === 'openai' && settings.geminiKey);
+    throw normalized;
   }
 }
 

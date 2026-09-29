@@ -148,7 +148,7 @@ export const DocumentationViewer: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="p-3 font-semibold text-sky-400">Shortcut</td>
-                    <td className="p-3 font-sans">Chrome commands API (Ctrl+Shift+V / Cmd+Shift+V), configurable via chrome://extensions/shortcuts.</td>
+                    <td className="p-3 font-sans">Chrome commands API (Ctrl+Shift+X / Cmd+Shift+X), configurable via chrome://extensions/shortcuts.</td>
                     <td className="p-3 text-emerald-400 font-sans font-semibold">VERIFIED ✓</td>
                   </tr>
                   <tr>
@@ -189,7 +189,7 @@ export const DocumentationViewer: React.FC = () => {
             <ul className="list-disc list-inside space-y-2 text-xs text-slate-300 pl-2">
               <li><strong>Popup (`popup.html`):</strong> Instant voice capture from toolbar or keyboard shortcut.</li>
               <li><strong>Side Panel (`sidepanel.html`):</strong> Persistent side panel for multi-tasking across web pages without dismissal on focus change.</li>
-              <li><strong>Content Script (`content.js`):</strong> Injected shadow DOM voice recorder on active tabs via <code className="font-mono text-sky-300">Alt+Shift+V</code>.</li>
+              <li><strong>Content Script (`content.js`):</strong> Injected movable shadow DOM voice recorder on active tabs via <code className="font-mono text-sky-300">Ctrl+Shift+X</code> (or <code className="font-mono text-sky-300">Alt+Shift+X</code>).</li>
               <li><strong>Background (`background.js`):</strong> Handles shortcut command dispatches and options page routing.</li>
             </ul>
           </div>

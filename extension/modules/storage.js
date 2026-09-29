@@ -4,7 +4,7 @@
  */
 
 export const DEFAULT_SETTINGS = {
-  provider: 'openai', // 'openai' | 'gemini' | 'custom'
+  provider: 'none', // 'none' | 'openai' | 'gemini' | 'custom'
   openaiKey: '',
   openaiModel: 'gpt-4o-mini',
   geminiKey: '',
@@ -19,6 +19,31 @@ export const DEFAULT_SETTINGS = {
   enableFallback: true,
   fallbackProvider: 'gemini'
 };
+
+export function isProviderConfigured(settings, provider) {
+  if (!settings) return false;
+  if (provider === 'gemini') return Boolean(settings.geminiKey && settings.geminiKey.trim().length > 0);
+  if (provider === 'openai') return Boolean(settings.openaiKey && settings.openaiKey.trim().length > 0);
+  if (provider === 'custom') return Boolean(settings.customKey && settings.customKey.trim().length > 0);
+  return false;
+}
+
+export function getEffectiveProvider(settings) {
+  if (!settings) return 'none';
+  const isGoogle = isProviderConfigured(settings, 'gemini');
+  const isOpenAI = isProviderConfigured(settings, 'openai');
+  const isCustom = isProviderConfigured(settings, 'custom');
+
+  if (settings.provider === 'gemini' && isGoogle) return 'gemini';
+  if (settings.provider === 'openai' && isOpenAI) return 'openai';
+  if (settings.provider === 'custom' && isCustom) return 'custom';
+
+  if (isGoogle) return 'gemini';
+  if (isOpenAI) return 'openai';
+  if (isCustom) return 'custom';
+
+  return 'none';
+}
 
 export async function getSettings() {
   let settings = { ...DEFAULT_SETTINGS };

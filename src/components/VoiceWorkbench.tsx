@@ -16,6 +16,7 @@ import {
 import { WebSpeechController } from '../services/speechService';
 import { normalizeTranscript } from '../services/normalizer';
 import { refineTranscript } from '../services/refinementService';
+import { getStoredSettings, getActiveProviderInfo, getEffectiveActiveProvider, ActiveProviderInfo } from '../services/settingsState';
 
 interface VoiceWorkbenchProps {
   onOpenSettings: () => void;
@@ -49,13 +50,36 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
   const [isRefining, setIsRefining] = useState(false);
   const [banglaResult, setBanglaResult] = useState('');
   const [englishResult, setEnglishResult] = useState('');
-  const [copiedType, setCopiedType] = useState<'none' | 'bangla' | 'english' | 'both'>('none');
+  const [copiedType, setCopiedType] = useState<'none' | 'original' | 'bangla' | 'english' | 'both'>('none');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tone, setTone] = useState<'professional' | 'executive' | 'friendly'>('professional');
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3.8-flash');
+  const [activeInfo, setActiveInfo] = useState<ActiveProviderInfo>(getActiveProviderInfo());
 
   const speechRef = useRef<WebSpeechController | null>(null);
   const timerRef = useRef<any>(null);
+
+  // Sync active provider settings on mount and change
+  useEffect(() => {
+    const updateActiveInfo = () => {
+      setActiveInfo(getActiveProviderInfo());
+    };
+    updateActiveInfo();
+    window.addEventListener('vbp-settings-changed', updateActiveInfo);
+    return () => window.removeEventListener('vbp-settings-changed', updateActiveInfo);
+  }, []);
+
+  // Keyboard shortcut listener: Ctrl + Shift + X (or Cmd + Shift + X)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
+        e.preventDefault();
+        toggleRecording();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isRecording]);
 
   // Initialize speech controller
   useEffect(() => {
@@ -111,7 +135,20 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
     }
   };
 
+  const handleStopRecording = () => {
+    if (isRecording) {
+      speechRef.current?.stop();
+      setIsRecording(false);
+    }
+  };
+
   const handleRefine = async (textToRefine?: string) => {
+    // If still recording, stop first
+    if (isRecording) {
+      speechRef.current?.stop();
+      setIsRecording(false);
+    }
+
     const input = (textToRefine || normalizedTranscript || rawTranscript).trim();
     if (!input) {
       setErrorMessage('Please provide voice input or choose a sample prompt first.');
@@ -122,12 +159,38 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
     setErrorMessage(null);
 
     try {
+      const currentSettings = getStoredSettings();
+      const activeProvider = getEffectiveActiveProvider(currentSettings);
+
+      if (activeProvider === 'none') {
+        setErrorMessage('No API key has been configured yet. Please open Settings and configure an API key for Google Gemini or OpenAI first.');
+        onOpenSettings();
+        setIsRefining(false);
+        return;
+      }
+
       const result = await refineTranscript({
         transcript: input,
         tone: tone,
         conciseness: 'balanced',
-        provider: 'gateway',
-        model: selectedModel,
+        provider: activeProvider,
+        apiKey:
+          activeProvider === 'openai'
+            ? currentSettings.openaiKey
+            : activeProvider === 'gemini'
+            ? currentSettings.geminiKey
+            : activeProvider === 'custom'
+            ? currentSettings.customKey
+            : undefined,
+        model:
+          activeProvider === 'openai'
+            ? currentSettings.openaiModel
+            : activeProvider === 'gemini'
+            ? currentSettings.geminiModel
+            : activeProvider === 'custom'
+            ? currentSettings.customModel
+            : selectedModel,
+        customEndpoint: activeProvider === 'custom' ? currentSettings.customEndpoint : undefined,
       });
 
       setBanglaResult(result.bangla);
@@ -139,7 +202,8 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
     }
   };
 
-  const handleCopy = (text: string, type: 'bangla' | 'english' | 'both') => {
+  const handleCopy = (text: string, type: 'original' | 'bangla' | 'english' | 'both') => {
+    if (!text.trim()) return;
     navigator.clipboard.writeText(text).then(() => {
       setCopiedType(type);
       setTimeout(() => setCopiedType('none'), 2000);
@@ -172,6 +236,39 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Running API Key Indicator Badge */}
+            <button
+              onClick={onOpenSettings}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] cursor-pointer ${
+                activeInfo.hasActive
+                  ? activeInfo.id === 'openai'
+                    ? 'border-emerald-500/50 bg-emerald-950/60 text-emerald-300 hover:border-emerald-400'
+                    : activeInfo.id === 'gemini'
+                    ? 'border-sky-500/50 bg-sky-950/60 text-sky-300 hover:border-sky-400'
+                    : 'border-purple-500/50 bg-purple-950/60 text-purple-300 hover:border-purple-400'
+                  : 'border-white/10 bg-white/5 text-slate-400 hover:border-white/20 hover:text-slate-300'
+              }`}
+              title="Click to view or switch active running API key in Settings"
+            >
+              {activeInfo.hasActive ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>
+                    Running API Key: <strong className="text-white underline decoration-dotted">{activeInfo.name}</strong>
+                    <span className="text-[10px] text-slate-300 font-normal ml-1">({activeInfo.model})</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="inline-block h-2 w-2 rounded-full bg-slate-500"></span>
+                  <span>No API Key Configured (Click to set up)</span>
+                </>
+              )}
+            </button>
+
             <div className="rounded-lg border border-white/10 bg-[#090e1a] p-1 flex items-center text-xs">
               <button
                 onClick={() => setSelectedLang('bn-BD')}
@@ -240,7 +337,7 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
             </div>
 
             {/* Central Microphone Cluster */}
-            <div className="flex flex-col items-center justify-center py-6 space-y-4">
+            <div className="flex flex-col items-center justify-center py-6">
               <div className="relative flex items-center justify-center">
                 {isRecording && (
                   <div className="absolute h-28 w-28 rounded-full bg-red-500/20 animate-ping" />
@@ -261,34 +358,51 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
                   )}
                 </button>
               </div>
-
-              <div className="text-center space-y-1">
-                <p className="text-sm font-medium text-white">
-                  {isRecording ? 'Listening... Speak now' : 'Click microphone to begin voice input'}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {isRecording
-                    ? 'Speak in Bangla, English or Banglish codeswitching'
-                    : 'Shortcut: Press Ctrl+Shift+V or click to record'}
-                </p>
-              </div>
             </div>
 
-            {/* Live Transcript Box */}
+            {/* Original Voice Input Box */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Raw Captured Speech</span>
-                {rawTranscript && (
-                  <button
-                    onClick={() => {
-                      setRawTranscript('');
-                      setNormalizedTranscript('');
-                    }}
-                    className="hover:text-white transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-200">Original Voice Input</span>
+                  {rawTranscript && (
+                    <span className="text-[11px] text-slate-500">
+                      ({rawTranscript.trim().split(/\s+/).filter(Boolean).length} words)
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {rawTranscript && (
+                    <>
+                      <button
+                        onClick={() => handleCopy(rawTranscript, 'original')}
+                        className="inline-flex items-center gap-1 rounded bg-white/5 hover:bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-sky-400 transition-colors"
+                        title="Copy original voice input directly"
+                      >
+                        {copiedType === 'original' ? (
+                          <>
+                            <Check className="h-3 w-3 text-emerald-400" />
+                            <span className="text-emerald-400">Copied ✓</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span>Copy Voice Input</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRawTranscript('');
+                          setNormalizedTranscript('');
+                        }}
+                        className="hover:text-white text-[11px] transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <textarea
                 value={rawTranscript}
@@ -296,7 +410,7 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
                   setRawTranscript(e.target.value);
                   setNormalizedTranscript(normalizeTranscript(e.target.value));
                 }}
-                placeholder="Spoken words will stream here in real-time... (You can also type or paste directly)"
+                placeholder="Spoken words will stream here in real-time... Click Stop when finished to review or copy."
                 rows={4}
                 className="w-full rounded-lg border border-white/10 bg-[#090e1a] p-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none focus:border-sky-500 transition-colors resize-none"
               />
@@ -315,24 +429,66 @@ export const VoiceWorkbench: React.FC<VoiceWorkbenchProps> = ({ onOpenSettings }
               </div>
             )}
 
-            {/* Refinement Action Button */}
-            <button
-              onClick={() => handleRefine()}
-              disabled={isRefining || (!rawTranscript && !normalizedTranscript)}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-40 px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-sm"
-            >
-              {isRefining ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Polishing into Professional Bangla & English...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  <span>Refine into Professional Versions</span>
-                </>
-              )}
-            </button>
+            {/* Action Buttons: Stop, Copy Voice Input, Refine */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Stop Button */}
+              <button
+                type="button"
+                onClick={handleStopRecording}
+                disabled={!isRecording}
+                className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all shadow-sm ${
+                  isRecording
+                    ? 'bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-500/40 animate-pulse cursor-pointer'
+                    : 'bg-white/5 border border-white/10 text-slate-400 cursor-not-allowed opacity-50'
+                }`}
+                title={isRecording ? 'Click to stop voice recording' : 'Not recording'}
+              >
+                <Square className="h-4 w-4 fill-current" />
+                <span>Stop</span>
+              </button>
+
+              {/* Copy Original Voice Input Button */}
+              <button
+                type="button"
+                onClick={() => handleCopy(rawTranscript, 'original')}
+                disabled={!rawTranscript.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#18233e] hover:bg-[#202e52] border border-white/10 disabled:opacity-40 px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors shadow-sm"
+                title="Copy original voice input directly without refining"
+              >
+                {copiedType === 'original' ? (
+                  <>
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span className="text-emerald-400">Copied ✓</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 text-sky-400" />
+                    <span>Copy Voice Input</span>
+                  </>
+                )}
+              </button>
+
+              {/* Refine Action Button */}
+              <button
+                type="button"
+                onClick={() => handleRefine()}
+                disabled={isRefining || !rawTranscript.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-40 px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-sm"
+                title="Refine into professional Bangla & English versions"
+              >
+                {isRefining ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Refining...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Refine</span>
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* Sample Presets Strip */}
             <div className="space-y-2 pt-2 border-t border-white/10">

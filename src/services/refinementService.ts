@@ -12,9 +12,10 @@ export interface RefineOptions {
   transcript: string;
   tone?: 'professional' | 'executive' | 'friendly';
   conciseness?: 'concise' | 'balanced' | 'detailed';
-  provider?: 'gateway' | 'openai' | 'gemini';
+  provider?: 'gateway' | 'openai' | 'gemini' | 'custom';
   apiKey?: string;
   model?: string;
+  customEndpoint?: string;
 }
 
 export async function refineTranscript(options: RefineOptions): Promise<RefinementResult> {
@@ -117,6 +118,49 @@ Return JSON only:
 
     const data = await res.json();
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const parsed = JSON.parse(raw);
+    return {
+      bangla: parsed.bangla || '',
+      english: parsed.english || '',
+    };
+  }
+
+  // Option C: Custom / Local OpenAI-compatible API
+  if (provider === 'custom') {
+    const endpoint = options.customEndpoint || 'http://localhost:11434/v1/chat/completions';
+    const sysPrompt = `You are a professional bilingual language refinement assistant.
+Understand the intended meaning of the input and produce two polished versions:
+1. Natural professional Bangla
+2. Natural professional English
+Preserve original meaning and factual details strictly. Tone: ${tone}. Length: ${conciseness}.
+Return JSON only:
+{"bangla": "...", "english": "..."}`;
+
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (options.apiKey) {
+      headers['Authorization'] = `Bearer ${options.apiKey.trim()}`;
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: options.model || 'default',
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'user', content: transcript },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error?.message || `Custom API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content;
     const parsed = JSON.parse(raw);
     return {
       bangla: parsed.bangla || '',

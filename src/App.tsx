@@ -64,15 +64,17 @@ export default function App() {
       {/* Clean Editorial Footer */}
       <footer className="border-t border-white/10 bg-[#090e1a] py-6 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-300 font-medium">Developed by <strong className="text-sky-400 font-bold">Akash</strong></span>
+            <span>·</span>
             <span>Voice Bilingual Professionalizer</span>
             <span>·</span>
             <span className="font-mono text-[11px] text-sky-400">Manifest V3 (v1.0.0)</span>
-            <span>·</span>
-            <span>Bangla & English Executive Voice Input</span>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-500">
+          <div className="flex items-center gap-4 text-slate-400">
+            <span>Bangla & English Executive Voice Input</span>
+            <span>·</span>
             <span>Desktop Chrome (14" Laptop Optimized)</span>
             <span>·</span>
             <button

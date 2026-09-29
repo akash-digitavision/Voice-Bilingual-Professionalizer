@@ -15,6 +15,15 @@
         <h1 class="brand-title">Voice Bilingual Professionalizer</h1>
       </div>
       <p class="brand-subtitle">Configure AI credentials, speech recognition preferences, and keyboard shortcuts.</p>
+      
+      <!-- Active Running Platform Status Banner -->
+      <div class="active-running-banner no-active" id="options-active-banner">
+        <div class="banner-left">
+          <span class="live-pulse-dot dot-inactive" id="active-banner-dot"></span>
+          <span id="active-banner-text">Running API Key: <strong id="active-banner-name">None</strong> <span id="active-banner-model" class="banner-sub"></span></span>
+        </div>
+        <span class="active-badge-pill pill-inactive" id="active-banner-pill">NO RUNNING ENGINE</span>
+      </div>
     </header>
 
     <!-- Main Settings Form -->
@@ -25,35 +34,76 @@
           <h2 class="card-heading">AI Provider Configuration</h2>
           <span class="security-badge">🔒 Secure Local Storage</span>
         </div>
-        <p class="section-desc">Choose your AI provider. Credentials are stored solely in your local browser sandbox and never shared.</p>
+        <p class="section-desc">Select a platform panel below to configure credentials. Active status is strictly based on having a configured API key.</p>
 
-        <!-- Provider Tabs -->
-        <div class="provider-selector">
-          <label class="provider-radio">
-            <input type="radio" name="ai-provider" value="openai" id="prov-openai" checked>
-            <span class="provider-card">
-              <strong>OpenAI</strong>
-              <small>GPT-4o / GPT-4o-mini</small>
-            </span>
-          </label>
-          <label class="provider-radio">
-            <input type="radio" name="ai-provider" value="gemini" id="prov-gemini">
-            <span class="provider-card">
-              <strong>Google Gemini</strong>
-              <small>Gemini 2.5 Flash</small>
-            </span>
-          </label>
-          <label class="provider-radio">
-            <input type="radio" name="ai-provider" value="custom" id="prov-custom">
-            <span class="provider-card">
-              <strong>Custom / Local API</strong>
-              <small>Ollama, Groq, Proxy</small>
-            </span>
-          </label>
+        <!-- Provider Tabs (Click to View/Edit panel; does not switch active status without saving key) -->
+        <div class="provider-tabs-bar" role="tablist">
+          <button type="button" class="tab-button" id="tab-btn-gemini" data-tab="gemini">
+            <div class="tab-card-content">
+              <div class="tab-title-row">
+                <strong class="tab-title" style="color: #38bdf8;">Google API</strong>
+                <span class="tab-status-pill status-empty" id="status-pill-gemini">Not Configured</span>
+              </div>
+              <small class="tab-sub">Gemini 3.8 Flash</small>
+            </div>
+          </button>
+
+          <button type="button" class="tab-button" id="tab-btn-openai" data-tab="openai">
+            <div class="tab-card-content">
+              <div class="tab-title-row">
+                <strong class="tab-title" style="color: #34d399;">OpenAI</strong>
+                <span class="tab-status-pill status-empty" id="status-pill-openai">Not Configured</span>
+              </div>
+              <small class="tab-sub">GPT-4o / GPT-4o-mini</small>
+            </div>
+          </button>
+
+          <button type="button" class="tab-button" id="tab-btn-custom" data-tab="custom">
+            <div class="tab-card-content">
+              <div class="tab-title-row">
+                <strong class="tab-title" style="color: #c084fc;">Custom API</strong>
+                <span class="tab-status-pill status-empty" id="status-pill-custom">Not Configured</span>
+              </div>
+              <small class="tab-sub">Ollama, Groq, Proxy</small>
+            </div>
+          </button>
+        </div>
+
+        <!-- Google Gemini Fields -->
+        <div id="fields-gemini" class="provider-fields">
+          <div class="panel-header-badge badge-empty" id="panel-badge-gemini">
+            <span>● Google Gemini: Not Configured</span>
+          </div>
+
+          <div class="form-group">
+            <label for="gemini-key">Gemini API Key</label>
+            <div class="input-with-button">
+              <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off">
+              <button type="button" id="btn-toggle-gemini" class="btn-toggle">Show</button>
+            </div>
+            <small class="field-hint">Obtain key free from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</small>
+          </div>
+          <div class="form-group">
+            <label for="gemini-model">Model</label>
+            <select id="gemini-model">
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Latest & Recommended - Fast Bilingual)</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Cost-Efficient Flash Lite)</option>
+              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Complex Nuance & Pro Reasoning)</option>
+              <option value="gemini-flash-latest">gemini-flash-latest (Always Latest Flash)</option>
+            </select>
+          </div>
+          <div class="btn-panel-actions">
+            <button type="button" id="btn-save-gemini" class="btn btn-primary">Save & Activate Google API</button>
+            <button type="button" id="btn-clear-gemini" class="btn btn-danger-outline" style="display:none;">Clear Key</button>
+          </div>
         </div>
 
         <!-- OpenAI Fields -->
-        <div id="fields-openai" class="provider-fields">
+        <div id="fields-openai" class="provider-fields" style="display: none;">
+          <div class="panel-header-badge badge-empty" id="panel-badge-openai">
+            <span>● OpenAI: Not Configured</span>
+          </div>
+
           <div class="form-group">
             <label for="openai-key">OpenAI API Key</label>
             <div class="input-with-button">
@@ -71,31 +121,18 @@
               <option value="chatgpt-4o-latest">chatgpt-4o-latest</option>
             </select>
           </div>
-        </div>
-
-        <!-- Gemini Fields -->
-        <div id="fields-gemini" class="provider-fields" style="display: none;">
-          <div class="form-group">
-            <label for="gemini-key">Gemini API Key</label>
-            <div class="input-with-button">
-              <input type="password" id="gemini-key" placeholder="AIza..." autocomplete="off">
-              <button type="button" id="btn-toggle-gemini" class="btn-toggle">Show</button>
-            </div>
-            <small class="field-hint">Obtain from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</small>
-          </div>
-          <div class="form-group">
-            <label for="gemini-model">Model</label>
-            <select id="gemini-model">
-              <option value="gemini-3.8-flash">gemini-3.8-flash (Latest & Recommended - Fast Bilingual)</option>
-              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Cost-Efficient Flash Lite)</option>
-              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Complex Nuance & Pro Reasoning)</option>
-              <option value="gemini-flash-latest">gemini-flash-latest (Always Latest Flash)</option>
-            </select>
+          <div class="btn-panel-actions">
+            <button type="button" id="btn-save-openai" class="btn btn-primary">Save & Activate OpenAI</button>
+            <button type="button" id="btn-clear-openai" class="btn btn-danger-outline" style="display:none;">Clear Key</button>
           </div>
         </div>
 
         <!-- Custom Fields -->
         <div id="fields-custom" class="provider-fields" style="display: none;">
+          <div class="panel-header-badge badge-empty" id="panel-badge-custom">
+            <span>● Custom API: Not Configured</span>
+          </div>
+
           <div class="form-group">
             <label for="custom-endpoint">Endpoint URL (OpenAI-compatible)</label>
             <input type="url" id="custom-endpoint" placeholder="http://localhost:11434/v1/chat/completions">
@@ -108,12 +145,15 @@
             <label for="custom-model">Model Name</label>
             <input type="text" id="custom-model" placeholder="e.g. llama3:latest">
           </div>
+          <div class="btn-panel-actions">
+            <button type="button" id="btn-save-custom" class="btn btn-primary">Save & Activate Custom API</button>
+            <button type="button" id="btn-clear-custom" class="btn btn-danger-outline" style="display:none;">Clear Key</button>
+          </div>
         </div>
 
-        <!-- Test Connection & Clear Buttons -->
-        <div class="test-row">
-          <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection</button>
-          <button type="button" id="btn-clear-keys" class="btn btn-danger-outline">Clear Stored Keys</button>
+        <!-- Test Connection Row -->
+        <div class="test-row" style="margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px;">
+          <button type="button" id="btn-test-connection" class="btn btn-secondary">Test Connection (Current Panel)</button>
           <span id="test-status" class="test-status"></span>
         </div>
       </section>
@@ -168,7 +208,7 @@
         <div class="shortcut-box">
           <div class="shortcut-display">
             <span>Primary Shortcut:</span>
-            <kbd>Ctrl + Shift + V</kbd> <span class="dim">(or <kbd>⌘ + Shift + V</kbd> on Mac)</span>
+            <kbd>Ctrl + Shift + X</kbd> <span class="dim">(or <kbd>⌘ + Shift + X</kbd> on Mac)</span>
           </div>
           <p class="shortcut-instructions">
             To change or customize this keybinding in Chrome:
